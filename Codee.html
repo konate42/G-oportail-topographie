@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Application Cartographique - Nom Société</title>
+
+    <!-- Leaflet CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/leaflet-measure@3.3.0/dist/leaflet-measure.css"
+    />
+    <!-- Font Awesome pour les icônes -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <style>
+      /* Reset et polices */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      /* Barre d'en-tête */
+      #header-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: linear-gradient(135deg, #ff8c00, #ff8c00);
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 20px;
+        z-index: 10000;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .logo {
+        width: 40px;
+        height: auto;
+        margin-right: 20px;
+        filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
+      }
+
+      .company-logo {
+        height: 40px;
+        width: auto;
+        border-radius: 4px;
+      }
+
+      .company-name {
+        margin: 0;
+        font-size: 1.3em;
+        font-weight: 600;
+        color: white;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      /* NOUVEAU STYLE POUR LES BOUTONS */
+      .header-button {
+        width: 40px;
+        height: 40px;
+        background-color: rgba(255, 255, 255, 0.9);
+        border: none;
+        border-radius: 8px;
+        color: #333;
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .header-button:hover {
+        background-color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      /* Tooltips pour les boutons */
+      .header-button::after {
+        content: attr(title);
+        position: absolute;
+        bottom: -35px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #333;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        white-space: nowrap;
+        pointer-events: none;
+      }
+
+      .header-button:hover::after {
+        opacity: 1;
+      }
+
+      /* Conteneur principal */
+      #app-container {
+        position: relative;
+        width: 100%;
+        height: 100vh;
+        padding-top: 60px; /* Pour la barre d'en-tête */
+      }
+
+      /* Carte */
+      #map {
+        width: 100%;
+        height: 100%;
+        transition: margin-left 0.3s ease;
+      }
+
+      /* Panneau latéral (Légende) */
+      #legend-panel {
+        position: fixed;
+        bottom: 370px;
+        left: 0;
+        width: 40px;
+        height: 40px;
+        background: #f8f9fa;
+        border: 1px solid #ddd;
+        border-left: none;
+        border-radius: 0 8px 8px 0;
+        z-index: 1000;
+        transition: all 0.3s ease;
+        overflow: hidden;
+        box-shadow: 2px 2px 5px rgba(17, 17, 17, 0);
+      }
+
+      #legend-panel.expanded {
+        width: 300px;
+        height: 30vh;
+        transform: translateX(0);
+      }
+
+      .legend-handle {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ff8c00;
+        color: white;
+        cursor: pointer;
+        z-index: 1001;
+        border-radius: 0 8px 8px 0;
+      }
+
+      .legend-handle::after {
+        content: "";
+        display: block;
+        width: 20px;
+        height: 20px;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M7 10l5 5 5-5z'/></svg>");
+        background-repeat: no-repeat;
+        background-position: center;
+        transform: rotate(-90deg);
+        transition: transform 0.3s ease;
+      }
+
+      #legend-panel.expanded .legend-handle::after {
+        transform: rotate(90deg);
+      }
+
+      .legend-content {
+        padding: 15px;
+        width: 300px;
+        height: calc(100% - 40px);
+        margin-left: 40px;
+        overflow-y: auto;
+        background: white;
+      }
+
+      .legend-content h3 {
+        margin-bottom: 15px;
+        color: #ff8c00;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+      }
+
+      #legend-list {
+        list-style: none;
+      }
+
+      #legend-list li {
+        padding: 8px 10px;
+        margin-bottom: 5px;
+        background: #f0f0f0;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      #legend-list li:hover {
+        background: #e0e0e0;
+      }
+
+      /* Table attributaire */
+      #attribute-panel {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 40px;
+        background: #f8f9fa;
+        border-top: 1px solid #ddd;
+        z-index: 1000;
+        transition: all 0.3s ease;
+        overflow: hidden;
+        box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+      }
+
+      #attribute-panel.expanded {
+        height: 40vh;
+      }
+
+      .attribute-handle {
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ff8c00;
+        color: white;
+        cursor: pointer;
+        font-weight: bold;
+        position: relative;
+      }
+
+      .attribute-handle::after {
+        content: "";
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-top: 6px solid white;
+        transition: transform 0.3s ease;
+      }
+
+      #attribute-panel.expanded .attribute-handle::after {
+        transform: translateY(-50%) rotate(180deg);
+      }
+
+      .attribute-content {
+        padding: 15px;
+        height: calc(100% - 40px);
+        overflow-y: auto;
+      }
+
+      #attribute-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      #attribute-table th,
+      #attribute-table td {
+        padding: 8px 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+
+      #attribute-table th {
+        background-color: #ff8c00;
+        color: white;
+        position: sticky;
+        top: 0;
+      }
+
+      #attribute-table tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+
+      #attribute-table tr:hover {
+        background-color: #f0f0f0;
+        cursor: pointer;
+      }
+
+      /* Onglet pour la table attributaire */
+      .attribute-tab {
+        position: fixed;
+        bottom: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 20px;
+        background-color: rgba(226, 112, 13, 0.7);
+        border-radius: 5px 5px 0 0;
+        cursor: pointer;
+        z-index: 1001;
+        transition: all 0.2s;
+      }
+
+      /* Position de l'onglet quand la table est dépliée */
+      #attribute-panel.expanded + .attribute-tab {
+        bottom: calc(40vh + 40px);
+      }
+
+      .attribute-tab:hover {
+        background-color: rgba(44, 62, 80, 0.9);
+      }
+
+      /* Coordonnées */
+      .coordinate {
+        position: absolute;
+        bottom: 50px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 14px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        border: 1px solid #ddd;
+      }
+
+      /* Barre d'outils (recherche par nom) */
+      .custom-toolbar {
+        position: absolute;
+        top: 500px;
+        left: 10px;
+        z-index: 1001;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        transition: left 0.3s ease;
+      }
+
+      /* Décalage quand la légende est ouverte */
+      #legend-panel.expanded ~ #app-container .custom-toolbar,
+      #legend-panel.expanded + #app-container .custom-toolbar {
+        left: 310px;
+      }
+
+      /* NOUVEAU STYLE POUR LES BOUTONS DE LA BARRE D'OUTILS */
+      .custom-button {
+        width: 42px;
+        height: 42px;
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        color: #333;
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .custom-button:hover {
+        background-color: #f0f0f0;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      /* Tooltips pour les boutons de la barre d'outils */
+      .custom-button::after {
+        content: attr(title);
+        position: absolute;
+        left: 50px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: #333;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        white-space: nowrap;
+        pointer-events: none;
+      }
+
+      .custom-button:hover::after {
+        opacity: 1;
+      }
+
+      .search-filter {
+        display: none;
+        position: absolute;
+        top: 50px;
+        left: 0;
+        width: 180px;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        z-index: 1002;
+        padding: 5px 0;
+      }
+
+      .search-filter.show {
+        display: block;
+      }
+
+      .search-filter button {
+        display: block;
+        width: 100%;
+        padding: 10px 15px;
+        text-align: left;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        color: #333;
+        transition: background-color 0.2s;
+      }
+
+      .search-filter button:hover {
+        background-color: #f0f0f0;
+        color: #2c3e50;
+      }
+
+      /* Styles pour les menus déroulants */
+      .draw-menu,
+      .measure-menu,
+      .dropdown-menu {
+        display: none;
+        position: absolute;
+        top: 100px;
+        right: 0;
+        background-color: white;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1001;
+        min-width: 150px;
+      }
+
+      .draw-menu button,
+      .measure-menu button,
+      .dropdown-menu button {
+        display: block;
+        width: 100%;
+        padding: 10px 15px;
+        text-align: left;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+      }
+
+      .draw-menu button:hover,
+      .measure-menu button:hover,
+      .dropdown-menu button:hover {
+        background-color: #ff8c00;
+        color: white;
+      }
+
+      /* Popups et formulaires */
+      .popup-form {
+        display: none;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+        z-index: 1002;
+        width: 300px;
+      }
+
+      .popup-form label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+      }
+
+      .popup-form input {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      .popup-form button {
+        padding: 10px 15px;
+        margin-right: 10px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+      }
+
+      .popup-form button:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+
+      /* Impression */
+      #print-comment-form {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+        z-index: 10010;
+        width: 300px;
+      }
+
+      #print-comment {
+        width: 100%;
+        height: 80px;
+        margin-bottom: 15px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        resize: none;
+      }
+
+      .print-comment-display {
+        position: absolute;
+        bottom: 10px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 12px;
+        color: #333;
+        padding: 5px;
+        background-color: rgba(255, 255, 255, 0.8);
+        z-index: 1000;
+      }
+
+      /* Styles pour l'impression - Version modifiée */
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+
+        #header-bar,
+        #header-bar *,
+        #map,
+        #map *,
+        .print-comment-display {
+          visibility: visible;
+        }
+
+        #header-bar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          background-color: white !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          box-shadow: none;
+          border-bottom: 2px solid #000;
+        }
+
+        #map {
+          position: absolute;
+          left: 0;
+          top: 60px;
+          width: 100%;
+          height: calc(100% - 60px);
+          margin: 0;
+          padding: 0;
+        }
+
+        .print-comment-display {
+          position: absolute;
+          bottom: 10px;
+          left: 0;
+          right: 0;
+          text-align: center;
+          font-size: 12px;
+          color: #333;
+          padding: 5px;
+          background-color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Masquer les éléments inutiles à l'impression */
+        .attribute-tab,
+        #attribute-panel,
+        #legend-panel,
+        .custom-toolbar,
+        #draw-options,
+        .leaflet-control-container,
+        .coordinate {
+          display: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Barre d'en-tête -->
+    <div id="header-bar">
+      <div class="header-left">
+        <img src="BAHI NAJIB .jpg" alt="Logo" class="logo" />
+        <h1 class="company-name">Géoportail des projets topographiques</h1>
+      </div>
+      <div class="header-right">
+        <!-- Bouton Home -->
+        <button class="header-button home-button" title="Vue initiale">
+          <i class="fas fa-home"></i>
+        </button>
+
+        <!-- Bouton Impression -->
+        <button class="header-button print-button" title="Imprimer la carte">
+          <i class="fas fa-print"></i>
+        </button>
+
+        <!-- Bouton Dessin -->
+        <div style="position: relative">
+          <button class="header-button draw-main" title="Outils de dessin">
+            <i class="fas fa-pencil-alt"></i>
+          </button>
+          <div class="draw-menu">
+            <button class="draw-item" data-type="point">Point</button>
+            <button class="draw-item" data-type="line">Ligne</button>
+            <button class="draw-item" data-type="polygon">Polygone</button>
+            <button class="draw-item" data-type="edit">Éditer</button>
+            <button class="draw-item" data-type="clear">Effacer tout</button>
+          </div>
+        </div>
+
+        <!-- Bouton Mesure -->
+        <div style="position: relative">
+          <button class="header-button measure-main" title="Mesurer">
+            <i class="fas fa-ruler"></i>
+          </button>
+          <div class="measure-menu">
+            <button class="measure-item" data-type="distance">Distance</button>
+            <button class="measure-item" data-type="area">Surface</button>
+          </div>
+        </div>
+
+        <!-- Bouton Recherche par coordonnées -->
+        <button class="header-button search-location" title="Rechercher X, Y">
+          <i class="fas fa-map-marker-alt"></i>
+        </button>
+
+        <!-- Bouton Import/Export -->
+        <div style="position: relative">
+          <button
+            class="header-button dropdown-button"
+            title="Importer/Exporter"
+          >
+            <i class="fas fa-file-import"></i>
+          </button>
+          <div class="dropdown-menu">
+            <button id="import-geojson">Importer GeoJSON</button>
+            <button id="import-shp">Importer SHP (ZIP)</button>
+            <button id="export-geojson">Exporter en GeoJSON</button>
+            <button id="export-csv">Exporter en CSV</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panneau Légende -->
+    <div id="legend-panel">
+      <div class="legend-handle"></div>
+      <div class="legend-content">
+        <h3>Points affichés</h3>
+        <ul id="legend-list">
+          <!-- Rempli dynamiquement -->
+        </ul>
+      </div>
+    </div>
+
+    <!-- Conteneur principal -->
+    <div id="app-container">
+      <!-- Carte -->
+      <div id="map"></div>
+
+      <!-- Input fichier caché pour l'import -->
+      <input type="file" id="file-input" style="display: none" />
+
+      <!-- Affichage des coordonnées -->
+      <div class="coordinate">Lat: -- | Lng: --</div>
+
+      <!-- Table attributaire -->
+      <div id="attribute-panel">
+        <div class="attribute-handle">TABLE ATTRIBUTAIRE</div>
+        <div class="attribute-content">
+          <table id="attribute-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nom</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Rempli dynamiquement -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Onglet pour la table attributaire -->
+      <div class="attribute-tab"></div>
+
+      <!-- Barre d'outils (recherche) -->
+      <div class="custom-toolbar">
+        <button class="custom-button search-feature" title="Rechercher">
+          <i class="fa-solid fa-filter"></i>
+        </button>
+        <div class="search-filter">
+          <button data-type="name">Filtrer par nom</button>
+          <button data-type="id">Filtrer par ID</button>
+        </div>
+      </div>
+
+      <!-- Options de dessin -->
+      <div
+        id="draw-options"
+        style="
+          display: none;
+          position: absolute;
+          top: 100px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: white;
+          padding: 10px;
+          border-radius: 8px;
+          box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+          z-index: 1001;
+        "
+      >
+        <button id="finish-draw">Terminer</button>
+        <button id="undo-draw">Retirer dernier point</button>
+        <button id="cancel-draw">Annuler</button>
+      </div>
+
+      <!-- Formulaire de recherche par coordonnées -->
+      <div id="search-form" class="popup-form">
+        <label for="coord-x">Longitude (X) :</label>
+        <input
+          type="number"
+          id="coord-x"
+          step="any"
+          placeholder="ex: -7.0926"
+        />
+        <label for="coord-y">Latitude (Y) :</label>
+        <input
+          type="number"
+          id="coord-y"
+          step="any"
+          placeholder="ex: 31.7917"
+        />
+        <div style="text-align: right; margin-top: 15px">
+          <button id="search-cancel" style="background: #f0f0f0">
+            Annuler
+          </button>
+          <button id="search-go" style="background: #2c3e50; color: white">
+            Aller
+          </button>
+        </div>
+      </div>
+
+      <!-- Formulaire de recherche par nom/ID -->
+      <div id="search-feature-form" class="popup-form">
+        <label id="search-label" for="search-value">Rechercher par nom :</label>
+        <input type="text" id="search-value" placeholder="Entrez le nom" />
+        <div style="text-align: right; margin-top: 15px">
+          <button id="search-feature-cancel" style="background: #f0f0f0">
+            Annuler
+          </button>
+          <button
+            id="search-feature-go"
+            style="background: #2c3e50; color: white"
+          >
+            Rechercher
+          </button>
+        </div>
+      </div>
+
+      <!-- Formulaire de commentaire pour l'impression -->
+      <div id="print-comment-form">
+        <h3>Ajouter un commentaire</h3>
+        <textarea
+          id="print-comment"
+          placeholder="Entrez votre commentaire ici (max 200 caractères)"
+          maxlength="200"
+        ></textarea>
+        <div style="text-align: right">
+          <button
+            id="print-comment-cancel"
+            style="background: #f0f0f0; margin-right: 10px"
+          >
+            Annuler
+          </button>
+          <button
+            id="print-comment-confirm"
+            style="background: #2c3e50; color: white"
+          >
+            Imprimer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Librairies JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-measure@3.3.0/dist/leaflet-measure.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://unpkg.com/leaflet-ajax@2.1.0/dist/leaflet.ajax.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <script>
+      // Variables globales
+      let map;
+      let drawnItems;
+      let measureControl;
+      let drawControl;
+      let drawHandler;
+      let currentShape;
+      let pointsData = [];
+      let pointsLayerMapping = new Map();
+      let currentFilterType = "name"; // Valeur par défaut
+      let printComment = "";
+
+      // Initialisation de l'application
+      $(document).ready(function () {
+        initMap();
+        initUI();
+        initEvents();
+        loadInitialData();
+      });
+
+      function initMap() {
+        // Création de la carte
+        map = L.map("map").setView([31.7917, -7.0926], 6);
+
+        // Couches de base
+        const osm = L.tileLayer(
+          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          {
+            attribution: "&copy; OpenStreetMap contributors",
+          }
+        ).addTo(map);
+
+        const googleStreets = L.tileLayer(
+          "https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+          {
+            subdomains: ["mt0", "mt1", "mt2", "mt3"],
+            maxZoom: 20,
+          }
+        );
+
+        const googleSatellite = L.tileLayer(
+          "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+          {
+            subdomains: ["mt0", "mt1", "mt2", "mt3"],
+            maxZoom: 20,
+          }
+        );
+
+        const googleTerrain = L.tileLayer(
+          "https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+          {
+            subdomains: ["mt0", "mt1", "mt2", "mt3"],
+            maxZoom: 20,
+          }
+        );
+
+        const googleHybrid = L.tileLayer(
+          "https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+          {
+            subdomains: ["mt0", "mt1", "mt2", "mt3"],
+            maxZoom: 20,
+          }
+        );
+
+        // Contrôle des couches
+        const baseLayers = {
+          OpenStreetMap: osm,
+          "Google Streets": googleStreets,
+          "Google Satellite": googleSatellite,
+          "Google Terrain": googleTerrain,
+          "Google Hybrid": googleHybrid,
+        };
+
+        L.control.layers(baseLayers).addTo(map);
+
+        // Groupe pour les éléments dessinés
+        drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        // Initialisation des outils de dessin
+        drawControl = new L.Control.Draw({
+          edit: {
+            featureGroup: drawnItems,
+          },
+          draw: {
+            polygon: {
+              allowIntersection: false,
+              showArea: true,
+            },
+            marker: false,
+          },
+        });
+
+        // Contrôle d'échelle
+        L.control.scale().addTo(map);
+
+        // Affichage des coordonnées
+        map.on("mousemove", function (e) {
+          $(".coordinate").html(
+            `Lat: ${e.latlng.lat.toFixed(5)} | Lng: ${e.latlng.lng.toFixed(5)}`
+          );
+        });
+      }
+
+      function initUI() {
+        // Plus besoin d'initialiser les icônes via CSS car nous utilisons Font Awesome directement dans le HTML
+      }
+
+      function initEvents() {
+        // Gestion des panels
+        $(".attribute-handle").click(function () {
+          $("#attribute-panel").toggleClass("expanded");
+        });
+
+        // Gestion du nouvel onglet
+        $(".attribute-tab").click(function () {
+          $("#attribute-panel").toggleClass("expanded");
+        });
+
+        $(".legend-handle").click(function () {
+          const legendPanel = $("#legend-panel");
+          legendPanel.toggleClass("expanded");
+
+          if (legendPanel.hasClass("expanded")) {
+            $("#map").css("margin-left", "300px");
+          } else {
+            $("#map").css("margin-left", "0");
+          }
+        });
+
+        // Gestion du bouton Home
+        $(".home-button").click(function () {
+          map.setView([31.7917, -7.0926], 6);
+        });
+
+        // Gestion de l'impression - Version modifiée
+        $(".print-button").click(function () {
+          $("#print-comment-form").show();
+        });
+
+        $("#print-comment-cancel").click(function () {
+          $("#print-comment-form").hide();
+        });
+
+        $("#print-comment-confirm").click(function () {
+          printComment = $("#print-comment").val().trim();
+          $("#print-comment-form").hide();
+
+          // Création d'un conteneur pour l'impression
+          const printContainer = $("<div id='print-container'></div>").css({
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: "100%",
+            height: "100%",
+            margin: 0,
+            padding: 0,
+            visibility: "visible",
+            "z-index": 99999,
+            background: "white",
+          });
+
+          // Cloner la barre d'en-tête et la carte
+          const headerClone = $("#header-bar").clone();
+          const mapClone = $("#map").clone();
+
+          // Ajouter le commentaire si fourni
+          if (printComment) {
+            const commentDisplay = $(
+              `<div class="print-comment-display">${printComment}</div>`
+            );
+            printContainer.append(commentDisplay);
+          }
+
+          printContainer.append(headerClone);
+          printContainer.append(mapClone);
+
+          $("body").append(printContainer);
+
+          // Masquer tous les autres éléments
+          $("body").children().not(printContainer).css("visibility", "hidden");
+
+          // Ajuster la taille et position des éléments clonés
+          headerClone.css({
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "60px",
+            background: "white !important",
+            "-webkit-print-color-adjust": "exact",
+            "print-color-adjust": "exact",
+          });
+
+          mapClone.css({
+            position: "absolute",
+            left: 0,
+            top: "60px",
+            width: "100%",
+            height: "calc(100% - 60px)",
+            margin: 0,
+            padding: 0,
+          });
+
+          // Impression
+          window.print();
+
+          // Restauration après impression
+          setTimeout(() => {
+            printContainer.remove();
+            $("body").children().css("visibility", "visible");
+          }, 500);
+        });
+
+        // Gestion des menus déroulants
+        $(".draw-main").click(function (e) {
+          e.stopPropagation();
+          $(".draw-menu").toggle();
+          $(".measure-menu, .dropdown-menu, .search-filter").hide();
+        });
+
+        $(".measure-main").click(function (e) {
+          e.stopPropagation();
+          $(".measure-menu").toggle();
+          $(".draw-menu, .dropdown-menu, .search-filter").hide();
+        });
+
+        $(".dropdown-button").click(function (e) {
+          e.stopPropagation();
+          $(".dropdown-menu").toggle();
+          $(".draw-menu, .measure-menu, .search-filter").hide();
+        });
+
+        // Gestion du nouveau menu de recherche/filtre
+        $(".search-feature").click(function (e) {
+          e.stopPropagation();
+          $(".search-filter").toggleClass("show");
+          $(".draw-menu, .measure-menu, .dropdown-menu").hide();
+        });
+
+        $(".search-filter button").click(function (e) {
+          e.stopPropagation();
+          currentFilterType = $(this).data("type");
+          $(".search-filter").removeClass("show");
+
+          const label =
+            currentFilterType === "name"
+              ? "Rechercher par nom :"
+              : "Rechercher par ID :";
+          $("#search-label").text(label);
+          $("#search-value").attr(
+            "placeholder",
+            currentFilterType === "name" ? "Entrez le nom" : "Entrez l'ID"
+          );
+
+          $("#search-feature-form").show();
+          $("#search-value").val("").focus();
+        });
+
+        $(document).click(function (e) {
+          if (
+            !$(e.target).closest(".search-filter").length &&
+            !$(e.target).hasClass("search-feature")
+          ) {
+            $(".search-filter").removeClass("show");
+          }
+          $(".draw-menu, .measure-menu, .dropdown-menu").hide();
+        });
+
+        // Gestion de la mesure
+        $(".measure-menu").on("click", ".measure-item", function () {
+          const type = $(this).data("type");
+          $(".measure-menu").hide();
+
+          if (measureControl && measureControl._currentMode === type) {
+            measureControl.remove();
+            measureControl = null;
+            return;
+          }
+
+          if (measureControl) measureControl.remove();
+
+          measureControl = new L.Control.Measure({
+            position: "topleft",
+            primaryLengthUnit: "kilometers",
+            secondaryLengthUnit: "meters",
+            primaryAreaUnit: "hectares",
+            activeColor: "#3388ff",
+            completedColor: "#3388ff",
+            captureZIndex: 10000,
+          });
+
+          measureControl.addTo(map);
+          measureControl._toggleMeasure(type);
+        });
+
+        // Gestion du dessin
+        $(".draw-menu").on("click", ".draw-item", function () {
+          const type = $(this).data("type");
+          $(".draw-menu").hide();
+
+          if (type === "clear") {
+            drawnItems.clearLayers();
+            return;
+          }
+
+          if (type === "edit") {
+            if (drawnItems.getLayers().length === 0) {
+              alert("Aucun élément à éditer");
+              return;
+            }
+
+            if (drawHandler) {
+              drawHandler.disable();
+              drawHandler = null;
+            }
+
+            new L.EditToolbar.Edit(map, {
+              featureGroup: drawnItems,
+            }).enable();
+            return;
+          }
+
+          if (drawHandler) {
+            drawHandler.disable();
+          }
+
+          let options = {
+            shapeOptions: {
+              color: "#3388ff",
+              fillColor: "#3388ff",
+              fillOpacity: 0.5,
+            },
+          };
+
+          switch (type) {
+            case "point":
+              drawHandler = new L.Draw.Marker(map, options);
+              break;
+            case "line":
+              drawHandler = new L.Draw.Polyline(map, options);
+              break;
+            case "polygon":
+              drawHandler = new L.Draw.Polygon(map, options);
+              break;
+          }
+
+          if (drawHandler) {
+            drawHandler.enable();
+            $("#draw-options").show();
+          }
+        });
+
+        // Événements de dessin
+        map.on("draw:drawstart", function () {
+          currentShape = [];
+        });
+
+        map.on("draw:drawvertex", function (e) {
+          const layer = e.layers.getLayers()[0];
+          if (layer) {
+            currentShape = layer.getLatLngs();
+            if (Array.isArray(currentShape[0])) currentShape = currentShape[0];
+          }
+        });
+
+        map.on("draw:created", function (e) {
+          drawnItems.addLayer(e.layer);
+          drawHandler.disable();
+          drawHandler = null;
+          currentShape = null;
+          $("#draw-options").hide();
+        });
+
+        // Gestion des options de dessin
+        $("#finish-draw").click(function () {
+          if (drawHandler) {
+            drawHandler._finishShape();
+          }
+        });
+
+        $("#cancel-draw").click(function () {
+          if (drawHandler) {
+            drawHandler.disable();
+            drawHandler = null;
+          }
+          currentShape = null;
+          $("#draw-options").hide();
+        });
+
+        $("#undo-draw").click(function () {
+          if (!currentShape || currentShape.length <= 1) return;
+          currentShape.pop();
+
+          let tempLayer;
+          if (drawHandler instanceof L.Draw.Polyline) {
+            tempLayer = L.polyline(currentShape);
+          } else if (drawHandler instanceof L.Draw.Polygon) {
+            tempLayer = L.polygon(currentShape);
+          }
+
+          if (tempLayer) {
+            map.eachLayer((layer) => {
+              if (layer instanceof L.Polyline && !drawnItems.hasLayer(layer)) {
+                map.removeLayer(layer);
+              }
+            });
+            tempLayer.addTo(map);
+          }
+        });
+
+        // Gestion Import/Export
+        $("#export-geojson").click(function () {
+          if (drawnItems.getLayers().length === 0) {
+            alert("Aucune donnée à exporter");
+            return;
+          }
+
+          const data = drawnItems.toGeoJSON();
+          const blob = new Blob([JSON.stringify(data)], {
+            type: "application/json",
+          });
+          saveAs(blob, "carte.geojson");
+        });
+
+        $("#export-csv").click(function () {
+          if (drawnItems.getLayers().length === 0) {
+            alert("Aucune donnée à exporter");
+            return;
+          }
+
+          const features = drawnItems.toGeoJSON().features;
+          let csv = "type,nom,latitude,longitude\n";
+
+          features.forEach((f) => {
+            if (f.geometry.type === "Point") {
+              const nom = f.properties?.nom || "Point";
+              csv += `Point,${nom},${f.geometry.coordinates[1]},${f.geometry.coordinates[0]}\n`;
+            } else if (
+              f.geometry.type === "LineString" ||
+              f.geometry.type === "Polygon"
+            ) {
+              const coords =
+                f.geometry.type === "Polygon"
+                  ? f.geometry.coordinates[0]
+                  : f.geometry.coordinates;
+              coords.forEach((c, i) => {
+                const nom = f.properties?.nom
+                  ? `${f.properties.nom}-${i + 1}`
+                  : `${f.geometry.type}-${i + 1}`;
+                csv += `${f.geometry.type},${nom},${c[1]},${c[0]}\n`;
+              });
+            }
+          });
+
+          const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+          saveAs(blob, "carte.csv");
+        });
+
+        $("#import-geojson").click(function () {
+          $("#file-input").attr("accept", ".geojson,.json");
+          $("#file-input").click();
+        });
+
+        $("#import-shp").click(function () {
+          $("#file-input").attr("accept", ".zip");
+          $("#file-input").click();
+        });
+
+        // Gestion des fichiers importés
+        $("#file-input").change(async function (e) {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+
+          if (file.name.endsWith(".zip")) {
+            // Import SHP
+            reader.onload = async function (event) {
+              try {
+                const source = await shp(event.target.result);
+                const layer = L.geoJSON(source, {
+                  onEachFeature: function (feature, layer) {
+                    if (feature.properties) {
+                      const popupContent = Object.entries(feature.properties)
+                        .map(([key, val]) => `<b>${key}</b>: ${val}`)
+                        .join("<br>");
+                      layer.bindPopup(popupContent);
+                    }
+                  },
+                });
+                drawnItems.addLayer(layer);
+                map.fitBounds(layer.getBounds());
+              } catch (err) {
+                alert("Erreur lors de l'import du fichier SHP");
+                console.error(err);
+              }
+            };
+            reader.readAsArrayBuffer(file);
+          } else {
+            // Import GeoJSON
+            reader.onload = function (event) {
+              try {
+                const geojson = JSON.parse(event.target.result);
+                const geojsonLayer = L.geoJSON(geojson, {
+                  onEachFeature: function (feature, layer) {
+                    if (feature.properties) {
+                      const popupContent = Object.entries(feature.properties)
+                        .map(([key, val]) => `<b>${key}</b>: ${val}`)
+                        .join("<br>");
+                      layer.bindPopup(popupContent);
+                    }
+                  },
+                });
+                drawnItems.addLayer(geojsonLayer);
+                map.fitBounds(geojsonLayer.getBounds());
+              } catch (err) {
+                alert("Erreur lors de l'import du fichier GeoJSON");
+                console.error(err);
+              }
+            };
+            reader.readAsText(file);
+          }
+        });
+
+        // Gestion de la recherche par coordonnées
+        $(".search-location").click(function () {
+          $("#search-form").show();
+        });
+
+        $("#search-cancel").click(function () {
+          $("#search-form").hide();
+        });
+
+        $("#search-go").click(function () {
+          const x = parseFloat($("#coord-x").val());
+          const y = parseFloat($("#coord-y").val());
+
+          if (isNaN(x) || isNaN(y)) {
+            alert("Veuillez entrer des coordonnées valides");
+            return;
+          }
+
+          const latlng = L.latLng(y, x);
+          map.setView(latlng, 14);
+
+          L.marker(latlng)
+            .addTo(map)
+            .bindPopup(
+              `Coordonnées :<br>Lat: ${y.toFixed(5)}<br>Lng: ${x.toFixed(5)}`
+            )
+            .openPopup();
+
+          $("#search-form").hide();
+        });
+
+        // Gestion de la recherche (remplace l'ancienne recherche par nom)
+        $("#search-feature-cancel").click(function () {
+          $("#search-feature-form").hide();
+        });
+
+        $("#search-feature-go").click(function () {
+          const searchTerm = $("#search-value").val().trim().toLowerCase();
+
+          if (!searchTerm) {
+            alert("Veuillez entrer un terme de recherche");
+            return;
+          }
+
+          const foundFeatures = pointsData.filter((feature) => {
+            if (currentFilterType === "name") {
+              const name = feature.properties?.nom?.toLowerCase() || "";
+              return name.includes(searchTerm);
+            } else {
+              // Filtre par ID
+              const id =
+                feature.properties?.id?.toString().toLowerCase() ||
+                feature.id?.toString().toLowerCase() ||
+                "";
+              return id.includes(searchTerm);
+            }
+          });
+
+          if (foundFeatures.length === 0) {
+            alert("Aucun point trouvé avec ce critère");
+            return;
+          }
+
+          const firstFeature = foundFeatures[0];
+          const coords = firstFeature.geometry.coordinates;
+          const latlng = L.latLng(coords[1], coords[0]);
+
+          map.setView(latlng, 16);
+
+          const layer = pointsLayerMapping.get(firstFeature);
+          if (layer) layer.openPopup();
+
+          $("#search-feature-form").hide();
+        });
+      }
+
+      function loadInitialData() {
+        const wfsUrl =
+          "http://localhost:8080/geoserver/Maroc/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=Maroc%3APOINTSS&maxFeatures=50&outputFormat=application%2Fjson";
+
+        loadWFSLayerWithPopup(wfsUrl, {
+          popupTitle: "Détails du point",
+          style: {
+            color: "#3388ff",
+            fillColor: "#3388ff",
+            radius: 6,
+          },
+        })
+          .then((layer) => {
+            layer.addTo(map);
+            map.fitBounds(layer.getBounds());
+          })
+          .catch((error) => {
+            alert("Erreur lors du chargement de la couche: " + error.message);
+          });
+      }
+
+      function loadWFSLayerWithPopup(wfsUrl, options = {}) {
+        const defaultOptions = {
+          style: {
+            color: "#FF0000",
+            fillColor: "#FF0000",
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8,
+            radius: 8,
+          },
+          popupTitle: "Informations du point",
+          onEachFeature: null,
+        };
+
+        pointsData = [];
+        pointsLayerMapping = new Map();
+
+        const finalOptions = { ...defaultOptions, ...options };
+
+        return fetch(wfsUrl)
+          .then((response) => {
+            if (!response.ok)
+              throw new Error(`Erreur HTTP! Statut: ${response.status}`);
+            return response.json();
+          })
+          .then((geojson) => {
+            if (!geojson.features || geojson.features.length === 0) {
+              throw new Error("Le GeoJSON est vide ou mal formatté");
+            }
+
+            pointsData = geojson.features;
+            updateAttributeTable(geojson.features);
+            updateLegend(geojson.features);
+
+            return L.geoJSON(geojson, {
+              pointToLayer: function (feature, latlng) {
+                return L.circleMarker(latlng, finalOptions.style);
+              },
+              onEachFeature: function (feature, layer) {
+                pointsLayerMapping.set(feature, layer);
+
+                // Sélection des 3 propriétés les plus importantes à afficher
+                const importantProperties = {};
+                const props = feature.properties;
+
+                // Priorité aux propriétés 'nom', 'id', 'type' ou les 3 premières disponibles
+                if (props.nom) importantProperties.nom = props.nom;
+                if (props.id) importantProperties.id = props.id;
+                if (props.type) importantProperties.type = props.type;
+
+                // Compléter avec d'autres propriétés si nécessaire
+                const propKeys = Object.keys(props);
+                for (const key of propKeys) {
+                  if (Object.keys(importantProperties).length >= 3) break;
+                  if (!["nom", "id", "type"].includes(key)) {
+                    importantProperties[key] = props[key];
+                  }
+                }
+
+                let popupContent = `<h3>${finalOptions.popupTitle}</h3><table class="attribute-table">`;
+
+                // Affichage limité à 3 propriétés
+                let count = 0;
+                for (const [key, value] of Object.entries(
+                  importantProperties
+                )) {
+                  if (count >= 3) break;
+                  popupContent += `<tr><th>${key}</th><td>${
+                    value !== null ? value : "N/A"
+                  }</td></tr>`;
+                  count++;
+                }
+
+                popupContent += `</table>`;
+
+                if (feature.properties.pdf_url) {
+                  popupContent += `<div class="popup-actions">
+                                    <a href="${feature.properties.pdf_url}" download class="export-pdf-btn">
+                                        Télécharger PDF
+                                    </a>
+                                </div>`;
+                }
+
+                layer.bindPopup(popupContent, {
+                  maxWidth: 400,
+                  minWidth: 300,
+                });
+
+                if (finalOptions.onEachFeature) {
+                  finalOptions.onEachFeature(feature, layer);
+                }
+              },
+            });
+          })
+          .catch((error) => {
+            console.error("Erreur lors du chargement de la couche WFS:", error);
+            throw error;
+          });
+      }
+
+      function updateAttributeTable(features) {
+        const tbody = $("#attribute-table tbody");
+        tbody.empty();
+
+        features.forEach((feature, index) => {
+          const row = $(`
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${feature.properties?.nom || "N/A"}</td>
+                        <td>${feature.geometry.coordinates[1].toFixed(5)}</td>
+                        <td>${feature.geometry.coordinates[0].toFixed(5)}</td>
+                        <td>Point</td>
+                    </tr>
+                `);
+
+          row.click(() => {
+            const coords = feature.geometry.coordinates;
+            map.setView([coords[1], coords[0]], 16);
+            const layer = pointsLayerMapping.get(feature);
+            if (layer) layer.openPopup();
+          });
+
+          tbody.append(row);
+        });
+      }
+
+      function updateLegend(features) {
+        const legendList = $("#legend-list");
+        legendList.empty();
+
+        features.forEach((feature) => {
+          const li = $(
+            `<li>${feature.properties?.nom || "Point sans nom"}</li>`
+          );
+
+          li.click(() => {
+            const coords = feature.geometry.coordinates;
+            map.setView([coords[1], coords[0]], 16);
+            const layer = pointsLayerMapping.get(feature);
+            if (layer) layer.openPopup();
+          });
+
+          legendList.append(li);
+        });
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,242 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+#toolbar {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  z-index: 1000;
+}
+
+#toolbar button {
+  width: 40px;
+  height: 40px;
+  background-color: white;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  border: 1px solid gray;
+  cursor: pointer;
+  padding: 0;
+}
+
+#measure-length {
+  background-image: url("image/lenght.png");
+}
+
+#measure-area {
+  background-image: url("image/area.png");
+}
+
+#measurement-result {
+  position: absolute;
+  bottom: 5px;
+  left: 5px;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 6px;
+  font-weight: bold;
+  z-index: 1000;
+}
+
+#draw-toolbar {
+  position: absolute;
+  top: 100px;
+  left: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+}
+
+#draw-toolbar button {
+  width: 40px;
+  height: 40px;
+  background-color: white;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  border: 1px solid gray;
+  cursor: pointer;
+  padding: 0;
+}
+
+#draw-point {
+  background-image: url("image/point.png");
+}
+
+#draw-line {
+  background-image: url("image/line.png");
+}
+
+#draw-polygon {
+  background-image: url("image/polygone.png");
+}
+
+#clear-draw {
+  background-image: url("image/clear.png");
+}
+
+#print-toolbar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#print-map {
+  width: 40px;
+  height: 40px;
+  background-color: white;
+  border: 1px solid gray;
+  background-image: url("image/print.png"); /* Vérifie que ce chemin est correct */
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  cursor: pointer;
+  padding: 0;
+}
+
+#mouse-coords {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.8);
+  padding: 4px 10px;
+  font-size: 14px;
+  font-weight: bold;
+  border: 1px solid rgb(229, 219, 219);
+  border-radius: 5px;
+  z-index: 1000;
+}
+
+#data-menu {
+  position: absolute;
+  top: 400px;
+  left: 5px;
+  z-index: 1000;
+}
+
+#data-main-button {
+  width: 40px;
+  height: 40px;
+  background-color: white;
+  background-image: url("image/importer.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  border: 1px solid gray;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  transition: background-color 0.2s;
+}
+
+#data-main-button:hover {
+  background-color: #f0f0f0;
+}
+
+#data-dropdown {
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  border: 1px solid gray;
+  margin-top: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+#data-dropdown.hidden {
+  display: none;
+}
+
+#data-dropdown button {
+  font-size: 13px;
+  padding: 6px 10px;
+  border: none;
+  background-color: white;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s;
+}
+
+#data-dropdown button:hover {
+  background-color: #eeeeee;
+}
+
+#drawing-controls {
+  position: absolute;
+  top: 300px;
+  left: 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 1000;
+  background: white;
+  border: 1px solid gray;
+  padding: 5px;
+}
+
+#drawing-controls.hidden {
+  display: none;
+}
+
+#drawing-controls button {
+  font-size: 12px;
+  cursor: pointer;
+}
+.popup-form {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 20px;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  z-index: 1002;
+}
+
+.popup-form label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.popup-form input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.popup-form button {
+  padding: 8px 15px;
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+/* Forcer l’affichage des images de fond des boutons à l’impression */
+@media print {
+  button,
+  .ol-control button {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
